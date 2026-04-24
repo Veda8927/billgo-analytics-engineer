@@ -1,0 +1,148 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0 -- /Users/veda/Documents/billgo-analytics-engineer/venv/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/veda/Documents/billgo-analytics-engineer
+plugins: Faker-40.15.0
+collecting ... collected 4 items
+
+tests/test_planted_bugs.py::test_interchange_fee_within_expected_range FAILED [ 25%]
+tests/test_planted_bugs.py::test_interchange_fee_total_count_of_bugged_rows FAILED [ 50%]
+tests/test_planted_bugs.py::test_every_vc_has_issuance_event FAILED      [ 75%]
+tests/test_planted_bugs.py::test_orphan_vc_count_matches_planted_rate FAILED [100%]
+
+=================================== FAILURES ===================================
+__________________ test_interchange_fee_within_expected_range __________________
+
+db = <connection object at 0x10988f8b0; dsn: 'dbname=billgo_analytics user=veda host=localhost port=5432', closed: 0>
+
+    def test_interchange_fee_within_expected_range(db):
+        """
+        Interchange fees should not exceed 10% of the captured amount.
+        Our normal synthetic rates are around 2%-3%.
+        """
+        bad_rows = run_query(db, """
+            SELECT event_id,
+                   invoice_id,
+                   amount,
+                   interchange_fee,
+                   ROUND((interchange_fee / amount * 100)::numeric, 2) AS fee_pct
+            FROM raw_payment_events
+            WHERE event_type = 'captured'
+              AND amount > 0
+              AND interchange_fee / amount > 0.10
+            ORDER BY fee_pct DESC
+            LIMIT 5
+        """)
+    
+>       assert len(bad_rows) == 0, (
+            "Found captures with interchange_fee > 10% of amount. "
+            "Likely decimal-scale bug. First offenders:\n"
+            + "\n".join(f"  {row}" for row in bad_rows)
+        )
+E       AssertionError: Found captures with interchange_fee > 10% of amount. Likely decimal-scale bug. First offenders:
+E           ('evt_000013803', 'inv_00004296', Decimal('67192.10'), Decimal('180074.8280'), Decimal('268.00'))
+E           ('evt_000027592', 'inv_00008575', Decimal('1319.49'), Decimal('3536.2332'), Decimal('268.00'))
+E           ('evt_000000307', 'inv_00000097', Decimal('9290.03'), Decimal('24897.2804'), Decimal('268.00'))
+E           ('evt_000013370', 'inv_00004157', Decimal('25935.29'), Decimal('69506.5772'), Decimal('268.00'))
+E           ('evt_000028722', 'inv_00008922', Decimal('60531.45'), Decimal('162224.2860'), Decimal('268.00'))
+E       assert 5 == 0
+E        +  where 5 = len([('evt_000013803', 'inv_00004296', Decimal('67192.10'), Decimal('180074.8280'), Decimal('268.00')), ('evt_000027592', 'inv_00008575', Decimal('1319.49'), Decimal('3536.2332'), Decimal('268.00')), ('evt_000000307', 'inv_00000097', Decimal('9290.03'), Decimal('24897.2804'), Decimal('268.00')), ('evt_000013370', 'inv_00004157', Decimal('25935.29'), Decimal('69506.5772'), Decimal('268.00')), ('evt_000028722', 'inv_00008922', Decimal('60531.45'), Decimal('162224.2860'), Decimal('268.00'))])
+
+tests/test_planted_bugs.py:29: AssertionError
+_______________ test_interchange_fee_total_count_of_bugged_rows ________________
+
+db = <connection object at 0x1099770d0; dsn: 'dbname=billgo_analytics user=veda host=localhost port=5432', closed: 0>
+
+    def test_interchange_fee_total_count_of_bugged_rows(db):
+        """
+        Count all captured events where interchange_fee is clearly too large.
+        """
+        bad_count = run_scalar(db, """
+            SELECT COUNT(*)
+            FROM raw_payment_events
+            WHERE event_type = 'captured'
+              AND amount > 0
+              AND interchange_fee / amount > 0.10
+        """)
+    
+>       assert bad_count == 0, (
+            f"{bad_count} captured events have interchange_fee > 10% of amount."
+        )
+E       AssertionError: 499 captured events have interchange_fee > 10% of amount.
+E       assert 499 == 0
+
+tests/test_planted_bugs.py:48: AssertionError
+_______________________ test_every_vc_has_issuance_event _______________________
+
+db = <connection object at 0x109977370; dsn: 'dbname=billgo_analytics user=veda host=localhost port=5432', closed: 0>
+
+    def test_every_vc_has_issuance_event(db):
+        """
+        Every virtual card should have at least one vc_issued or reissued event.
+        """
+        orphan_vcs = run_query(db, """
+            WITH vc_has_issuance AS (
+                SELECT
+                    virtual_card_id,
+                    BOOL_OR(event_type IN ('vc_issued', 'reissued')) AS has_issuance,
+                    COUNT(*) AS event_count,
+                    MIN(event_ts) AS first_event_ts
+                FROM raw_payment_events
+                GROUP BY virtual_card_id
+            )
+            SELECT virtual_card_id,
+                   event_count,
+                   first_event_ts
+            FROM vc_has_issuance
+            WHERE has_issuance = FALSE
+            LIMIT 5
+        """)
+    
+>       assert len(orphan_vcs) == 0, (
+            "Found virtual cards with no issuance event. First offenders:\n"
+            + "\n".join(f"  {row}" for row in orphan_vcs)
+        )
+E       AssertionError: Found virtual cards with no issuance event. First offenders:
+E           ('vc_00000529', 1, datetime.datetime(2024, 11, 18, 2, 28))
+E           ('vc_00001273', 2, datetime.datetime(2025, 5, 23, 17, 12))
+E           ('vc_00002558', 2, datetime.datetime(2025, 3, 10, 22, 49))
+E           ('vc_00002630', 1, datetime.datetime(2025, 7, 19, 3, 0))
+E           ('vc_00002805', 2, datetime.datetime(2024, 11, 20, 10, 15))
+E       assert 5 == 0
+E        +  where 5 = len([('vc_00000529', 1, datetime.datetime(2024, 11, 18, 2, 28)), ('vc_00001273', 2, datetime.datetime(2025, 5, 23, 17, 12)), ('vc_00002558', 2, datetime.datetime(2025, 3, 10, 22, 49)), ('vc_00002630', 1, datetime.datetime(2025, 7, 19, 3, 0)), ('vc_00002805', 2, datetime.datetime(2024, 11, 20, 10, 15))])
+
+tests/test_planted_bugs.py:75: AssertionError
+__________________ test_orphan_vc_count_matches_planted_rate ___________________
+
+db = <connection object at 0x1099774c0; dsn: 'dbname=billgo_analytics user=veda host=localhost port=5432', closed: 0>
+
+    def test_orphan_vc_count_matches_planted_rate(db):
+        """
+        Count all orphan VCs. This should fail before cleanup.
+        """
+        orphan_count = run_scalar(db, """
+            WITH vc_has_issuance AS (
+                SELECT
+                    virtual_card_id,
+                    BOOL_OR(event_type IN ('vc_issued', 'reissued')) AS has_issuance
+                FROM raw_payment_events
+                GROUP BY virtual_card_id
+            )
+            SELECT COUNT(*)
+            FROM vc_has_issuance
+            WHERE has_issuance = FALSE
+        """)
+    
+>       assert orphan_count == 0, (
+            f"{orphan_count} virtual cards missing issuance event."
+        )
+E       AssertionError: 197 virtual cards missing issuance event.
+E       assert 197 == 0
+
+tests/test_planted_bugs.py:98: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_planted_bugs.py::test_interchange_fee_within_expected_range
+FAILED tests/test_planted_bugs.py::test_interchange_fee_total_count_of_bugged_rows
+FAILED tests/test_planted_bugs.py::test_every_vc_has_issuance_event - Asserti...
+FAILED tests/test_planted_bugs.py::test_orphan_vc_count_matches_planted_rate
+============================== 4 failed in 0.19s ===============================

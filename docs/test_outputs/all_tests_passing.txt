@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0 -- /Users/veda/Documents/billgo-analytics-engineer/venv/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/veda/Documents/billgo-analytics-engineer
+plugins: Faker-40.15.0
+collecting ... collected 15 items
+
+tests/test_data_quality.py::test_smbs_have_expected_row_count PASSED     [  6%]
+tests/test_data_quality.py::test_events_exist PASSED                     [ 13%]
+tests/test_data_quality.py::test_all_tables_non_empty PASSED             [ 20%]
+tests/test_data_quality.py::test_smb_id_is_unique PASSED                 [ 26%]
+tests/test_data_quality.py::test_event_id_is_unique PASSED               [ 33%]
+tests/test_data_quality.py::test_invoice_id_is_unique PASSED             [ 40%]
+tests/test_data_quality.py::test_no_orphan_events PASSED                 [ 46%]
+tests/test_data_quality.py::test_no_orphan_invoices PASSED               [ 53%]
+tests/test_data_quality.py::test_invoice_amounts_are_positive PASSED     [ 60%]
+tests/test_data_quality.py::test_activation_after_enrollment PASSED      [ 66%]
+tests/test_data_quality.py::test_event_timestamps_within_data_window PASSED [ 73%]
+tests/test_planted_bugs.py::test_interchange_fee_within_expected_range PASSED [ 80%]
+tests/test_planted_bugs.py::test_interchange_fee_total_count_of_bugged_rows PASSED [ 86%]
+tests/test_planted_bugs.py::test_every_vc_has_issuance_event PASSED      [ 93%]
+tests/test_planted_bugs.py::test_orphan_vc_count_matches_planted_rate PASSED [100%]
+
+============================== 15 passed in 0.36s ==============================

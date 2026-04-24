@@ -1,0 +1,9 @@
+     channel      | avg_ltv_cac 
+------------------+-------------
+ organic          |     2710.76
+ webinar          |      351.63
+ partner_referral |      340.72
+ paid_search      |      167.44
+ direct_sales     |       80.48
+(5 rows)
+
