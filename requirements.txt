@@ -1,0 +1,8 @@
+faker>=40.0
+numpy>=2.0
+pandas>=2.0
+psycopg2-binary>=2.9
+python-dateutil>=2.9
+pytest>=8.0
+matplotlib>=3.8
+seaborn>=0.13
